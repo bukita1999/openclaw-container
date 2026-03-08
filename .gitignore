@@ -1,0 +1,15 @@
+.env
+data/openclaw/*
+data/workspace/*
+data/uv-cache/*
+data/uv-python/*
+data/go/*
+data/playwright/*
+!data/openclaw/.gitkeep
+!data/openclaw/openclaw.json
+!data/openclaw/openclaw.json.example
+!data/workspace/.gitkeep
+!data/uv-cache/.gitkeep
+!data/uv-python/.gitkeep
+!data/go/.gitkeep
+!data/playwright/.gitkeep

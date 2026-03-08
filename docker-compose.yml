@@ -1,0 +1,52 @@
+services:
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_MAJOR: ${NODE_MAJOR:-22}
+        OPENCLAW_VERSION: ${OPENCLAW_VERSION:-latest}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.12}
+        INSTALL_CHROMIUM: ${INSTALL_CHROMIUM:-0}
+        INSTALL_VNC: ${INSTALL_VNC:-0}
+        INSTALL_GO: ${INSTALL_GO:-0}
+        GO_VERSION: ${GO_VERSION:-1.26.1}
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        ALL_PROXY: ${ALL_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    image: ${IMAGE_NAME:-openclaw-ubuntu:local}
+    container_name: ${CONTAINER_NAME:-openclaw}
+    hostname: ${OPENCLAW_CONTAINER_HOSTNAME:-openclaw}
+    env_file:
+      - .env
+    environment:
+      HOME: /home/openclaw
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_BIND: ${OPENCLAW_GATEWAY_BIND:-lan}
+      OPENCLAW_GATEWAY_PORT: ${OPENCLAW_GATEWAY_PORT:-18789}
+      OPENCLAW_BRIDGE_PORT: ${OPENCLAW_BRIDGE_PORT:-18790}
+      UV_PYTHON_INSTALL_DIR: /opt/uv/python
+      UV_CACHE_DIR: /home/openclaw/.cache/uv
+      PLAYWRIGHT_BROWSERS_PATH: /opt/ms-playwright
+      GOPATH: /home/openclaw/go
+      DISPLAY: ${DISPLAY:-:99}
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+      - "${VNC_PORT:-5900}:5900"
+      - "${NOVNC_PORT:-6080}:6080"
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-./data/openclaw}:/home/openclaw/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-./data/workspace}:/home/openclaw/.openclaw/workspace
+      - ${UV_CACHE_DIR_HOST:-./data/uv-cache}:/home/openclaw/.cache/uv
+      - ${UV_PYTHON_DIR_HOST:-./data/uv-python}:/opt/uv/python
+      - ${GO_PATH_HOST:-./data/go}:/home/openclaw/go
+      - ${PLAYWRIGHT_CACHE_HOST:-./data/playwright}:/opt/ms-playwright
+    init: true
+    tty: true
+    stdin_open: true
+    shm_size: ${SHM_SIZE:-2gb}
+    restart: unless-stopped
