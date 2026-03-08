@@ -1,16 +1,4 @@
 {
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "dmPolicy": "pairing"
-    },
-    "discord": {
-      "enabled": true,
-      "token": "${DISCORD_BOT_TOKEN}",
-      "dmPolicy": "pairing"
-    }
-  },
   "models": {
     "mode": "merge",
     "providers": {
@@ -46,10 +34,50 @@
         "bailian/qwen3.5-plus": {
           "alias": "qwen3.5-plus"
         }
+      },
+      "compaction": {
+        "mode": "safeguard"
       }
     }
   },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "groupPolicy": "allowlist",
+      "streaming": "partial"
+    },
+    "discord": {
+      "enabled": true,
+      "token": "${DISCORD_BOT_TOKEN}",
+      "proxy": "${HTTPS_PROXY}",
+      "groupPolicy": "allowlist",
+      "dmPolicy": "pairing",
+      "guilds": {
+        "1480056048114073732": {
+          "channels": {
+            "1480100269285966025": {
+              "allow": true,
+              "requireMention": false
+            }
+          }
+        }
+      },
+      "streaming": "off"
+    }
+  },
   "gateway": {
-    "mode": "local"
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    }
   }
 }

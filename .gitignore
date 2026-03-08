@@ -6,7 +6,6 @@ data/uv-python/*
 data/go/*
 data/playwright/*
 !data/openclaw/.gitkeep
-!data/openclaw/openclaw.json
 !data/openclaw/openclaw.json.example
 !data/workspace/.gitkeep
 !data/uv-cache/.gitkeep

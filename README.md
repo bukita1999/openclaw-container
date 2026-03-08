@@ -26,13 +26,11 @@ OpenClaw 主配置文件路径：
 - 宿主机：`./data/openclaw/openclaw.json`
 - 容器内：`/home/openclaw/.openclaw/openclaw.json`
 
-仓库默认已经提供正式配置文件：
-
-- `./data/openclaw/openclaw.json`
-
-仓库同时保留一个示例副本：
+仓库默认跟踪的是示例配置：
 
 - `./data/openclaw/openclaw.json.example`
+
+真实运行配置 `./data/openclaw/openclaw.json` 会包含网关 token、配对状态或运行时变更，不建议提交到 Git；仓库已默认忽略该文件。
 
 当前正式版 `openclaw.json` 已经采用 `.env` 注入方式，所以只需要在 `.env` 里填写：
 
@@ -40,6 +38,7 @@ OpenClaw 主配置文件路径：
 TELEGRAM_BOT_TOKEN=
 DISCORD_BOT_TOKEN=
 BAILIAN_API_KEY=
+OPENCLAW_GATEWAY_TOKEN=
 ```
 
 注意：OpenClaw 的 `${VAR}` 配置替换要求变量非空；如果 `openclaw.json` 里使用了 `${TELEGRAM_BOT_TOKEN}` 这类写法，而 `.env` 里仍是空值，配置加载会报错。

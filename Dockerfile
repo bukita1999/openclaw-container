@@ -82,7 +82,6 @@ RUN set -eux; \
     python_bin_dir="$(dirname "${python_path}")"; \
     ln -sf "${python_path}" /usr/local/bin/python; \
     ln -sf "${python_path}" /usr/local/bin/python3; \
-    python -m ensurepip --upgrade; \
     if [[ -x "${python_bin_dir}/pip" ]]; then ln -sf "${python_bin_dir}/pip" /usr/local/bin/pip; fi; \
     if [[ -x "${python_bin_dir}/pip3" ]]; then ln -sf "${python_bin_dir}/pip3" /usr/local/bin/pip3; fi; \
     rm -rf /tmp/uv-cache
@@ -122,8 +121,23 @@ RUN set -eux; \
     fi
 
 RUN set -eux; \
-    groupadd --gid "${USER_GID}" openclaw; \
-    useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash openclaw; \
+    if getent group "${USER_GID}" >/dev/null; then \
+      group_name="$(getent group "${USER_GID}" | cut -d: -f1)"; \
+    elif getent group openclaw >/dev/null; then \
+      groupmod --gid "${USER_GID}" openclaw; \
+      group_name="openclaw"; \
+    else \
+      groupadd --gid "${USER_GID}" openclaw; \
+      group_name="openclaw"; \
+    fi; \
+    if id -u openclaw >/dev/null 2>&1; then \
+      usermod --uid "${USER_UID}" --gid "${USER_GID}" --home /home/openclaw --shell /bin/bash openclaw; \
+    elif getent passwd "${USER_UID}" >/dev/null; then \
+      existing_user="$(getent passwd "${USER_UID}" | cut -d: -f1)"; \
+      usermod --login openclaw --home /home/openclaw --shell /bin/bash --gid "${USER_GID}" "${existing_user}"; \
+    else \
+      useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash openclaw; \
+    fi; \
     mkdir -p \
       /workspace \
       /home/openclaw/.openclaw/workspace \
@@ -132,7 +146,7 @@ RUN set -eux; \
       /home/openclaw/go \
       /opt/ms-playwright \
       /opt/uv/python; \
-    chown -R openclaw:openclaw \
+    chown -R openclaw:"${group_name}" \
       /workspace \
       /home/openclaw \
       /opt/ms-playwright \
