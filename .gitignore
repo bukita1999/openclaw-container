@@ -5,6 +5,13 @@ data/uv-cache/*
 data/uv-python/*
 data/go/*
 data/playwright/*
+instances/*/.env
+instances/*/openclaw/*
+instances/*/workspace/*
+instances/*/uv-cache/*
+instances/*/uv-python/*
+instances/*/go/*
+instances/*/playwright/*
 !data/openclaw/.gitkeep
 !data/openclaw/openclaw.json.example
 !data/workspace/.gitkeep
@@ -12,3 +19,13 @@ data/playwright/*
 !data/uv-python/.gitkeep
 !data/go/.gitkeep
 !data/playwright/.gitkeep
+!instances/.gitkeep
+!instances/_template/
+!instances/_template/.env.example
+!instances/_template/openclaw/.gitkeep
+!instances/_template/openclaw/openclaw.json.example
+!instances/_template/workspace/.gitkeep
+!instances/_template/uv-cache/.gitkeep
+!instances/_template/uv-python/.gitkeep
+!instances/_template/go/.gitkeep
+!instances/_template/playwright/.gitkeep

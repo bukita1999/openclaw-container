@@ -21,7 +21,7 @@ services:
     container_name: ${CONTAINER_NAME:-openclaw}
     hostname: ${OPENCLAW_CONTAINER_HOSTNAME:-openclaw}
     env_file:
-      - .env
+      - ${INSTANCE_ENV_FILE:-.env}
     environment:
       HOME: /home/openclaw
       TERM: xterm-256color
