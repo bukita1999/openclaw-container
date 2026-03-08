@@ -150,6 +150,7 @@ instances/
 - `INSTALL_VNC`
 - `INSTALL_GO`
 - `GO_VERSION`
+- `USE_SJTUG_MIRROR`
 
 这样你只需要构建一次：
 
@@ -349,6 +350,12 @@ ALL_PROXY=http://host.docker.internal:7890
 NO_PROXY=127.0.0.1,localhost
 ```
 
+如果你希望构建阶段优先使用交大镜像，可额外设置：
+
+```env
+USE_SJTUG_MIRROR=1
+```
+
 这些变量会：
 
 - 作为 `docker compose build` 的 build args 传入 Dockerfile
@@ -359,6 +366,9 @@ NO_PROXY=127.0.0.1,localhost
 
 - `.env` 能控制容器内的构建和运行时网络访问
 - Docker 守护进程自己拉取 `ubuntu:24.04`、安装阶段访问远程 registry 时，如果宿主机 Docker daemon 本身也需要代理，仍然要单独配置宿主机 Docker 的代理
+- `USE_SJTUG_MIRROR=1` 目前会在构建阶段把 Ubuntu `archive/ports` 软件源切到 SJTUG，并让 `npm install` 使用 `https://mirrors.sjtug.sjtu.edu.cn/npm-registry`
+- 因为 SJTUG 的 `apt` 源走 HTTPS，Dockerfile 里会先安装 `ca-certificates` 再切换镜像，避免证书缺失导致 `apt-get update` 失败
+- Ubuntu 安全更新源 `security.ubuntu.com` 仍保持官方地址，以便更快拿到最新安全更新
 
 ## 迁移方案
 

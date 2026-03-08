@@ -12,6 +12,7 @@ ARG INSTALL_GO=0
 ARG GO_VERSION=1.26.1
 ARG USER_UID=1000
 ARG USER_GID=1000
+ARG USE_SJTUG_MIRROR=0
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG ALL_PROXY
@@ -40,11 +41,28 @@ RUN set -eux; \
     export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      bash-completion \
       ca-certificates \
       curl \
+      gnupg; \
+    if [[ "${USE_SJTUG_MIRROR}" == "1" ]]; then \
+      if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then \
+        sed -i \
+          -e 's|http://archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
+          -e 's|http://cn.archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
+          -e 's|http://ports.ubuntu.com/ubuntu-ports|https://mirror.sjtu.edu.cn/ubuntu-ports|g' \
+          /etc/apt/sources.list.d/ubuntu.sources; \
+      elif [[ -f /etc/apt/sources.list ]]; then \
+        sed -i \
+          -e 's|http://archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
+          -e 's|http://cn.archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
+          -e 's|http://ports.ubuntu.com/ubuntu-ports|https://mirror.sjtu.edu.cn/ubuntu-ports|g' \
+          /etc/apt/sources.list; \
+      fi; \
+      apt-get update; \
+    fi; \
+    apt-get install -y --no-install-recommends \
+      bash-completion \
       git \
-      gnupg \
       jq \
       locales \
       procps \
@@ -58,16 +76,20 @@ RUN set -eux; \
 RUN set -eux; \
     export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
     export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
+    npm_registry_args=(); \
+    if [[ "${USE_SJTUG_MIRROR}" == "1" ]]; then \
+      npm_registry_args+=(--registry=https://mirrors.sjtug.sjtu.edu.cn/npm-registry); \
+    fi; \
     install -m 0755 -d /etc/apt/keyrings; \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg; \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list; \
     apt-get update; \
     apt-get install -y --no-install-recommends nodejs tini; \
     corepack enable; \
-    if ! npm install -g "openclaw@${OPENCLAW_VERSION}"; then \
+    if ! npm install -g "${npm_registry_args[@]}" "openclaw@${OPENCLAW_VERSION}"; then \
       apt-get update; \
       apt-get install -y --no-install-recommends build-essential cmake; \
-      npm install -g "openclaw@${OPENCLAW_VERSION}"; \
+      npm install -g "${npm_registry_args[@]}" "openclaw@${OPENCLAW_VERSION}"; \
     fi; \
     npm cache clean --force; \
     rm -rf /var/lib/apt/lists/*
