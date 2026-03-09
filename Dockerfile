@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM debian:12-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -6,8 +6,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG NODE_MAJOR=22
 ARG OPENCLAW_VERSION=latest
 ARG PYTHON_VERSION=3.12
-ARG INSTALL_CHROMIUM=0
-ARG INSTALL_VNC=0
+ARG INSTALL_CHROMIUM=1
+ARG INSTALL_VNC=1
 ARG INSTALL_GO=0
 ARG GO_VERSION=1.26.1
 ARG USER_UID=1000
@@ -24,7 +24,8 @@ ENV TZ=Etc/UTC \
     HOME=/home/openclaw \
     UV_PYTHON_INSTALL_DIR=/opt/uv/python \
     UV_CACHE_DIR=/home/openclaw/.cache/uv \
-    PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright \
+    CHROMIUM_PROFILE_DIR=/home/openclaw/.config/chromium-profile \
+    CHROMIUM_BIN=/usr/bin/chromium \
     GOPATH=/home/openclaw/go \
     PATH=/usr/local/go/bin:/home/openclaw/go/bin:/home/openclaw/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
@@ -45,19 +46,18 @@ RUN set -eux; \
       curl \
       gnupg; \
     if [[ "${USE_SJTUG_MIRROR}" == "1" ]]; then \
-      if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then \
-        sed -i \
-          -e 's|http://archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
-          -e 's|http://cn.archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
-          -e 's|http://ports.ubuntu.com/ubuntu-ports|https://mirror.sjtu.edu.cn/ubuntu-ports|g' \
-          /etc/apt/sources.list.d/ubuntu.sources; \
-      elif [[ -f /etc/apt/sources.list ]]; then \
-        sed -i \
-          -e 's|http://archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
-          -e 's|http://cn.archive.ubuntu.com/ubuntu/|https://mirror.sjtu.edu.cn/ubuntu/|g' \
-          -e 's|http://ports.ubuntu.com/ubuntu-ports|https://mirror.sjtu.edu.cn/ubuntu-ports|g' \
-          /etc/apt/sources.list; \
-      fi; \
+      for sources_file in /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list; do \
+        if [[ -f "${sources_file}" ]]; then \
+          sed -i \
+            -e 's|http://deb.debian.org/debian|https://mirror.sjtu.edu.cn/debian|g' \
+            -e 's|https://deb.debian.org/debian|https://mirror.sjtu.edu.cn/debian|g' \
+            -e 's|http://security.debian.org/debian-security|https://mirror.sjtu.edu.cn/debian-security|g' \
+            -e 's|https://security.debian.org/debian-security|https://mirror.sjtu.edu.cn/debian-security|g' \
+            -e 's|http://deb.debian.org/debian-security|https://mirror.sjtu.edu.cn/debian-security|g' \
+            -e 's|https://deb.debian.org/debian-security|https://mirror.sjtu.edu.cn/debian-security|g' \
+            "${sources_file}"; \
+        fi; \
+      done; \
       apt-get update; \
     fi; \
     apt-get install -y --no-install-recommends \
@@ -98,7 +98,7 @@ RUN set -eux; \
     export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
     export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
     curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL=/usr/local/bin sh; \
-    mkdir -p "${UV_PYTHON_INSTALL_DIR}" "${PLAYWRIGHT_BROWSERS_PATH}" /opt/uv; \
+    mkdir -p "${UV_PYTHON_INSTALL_DIR}" /opt/uv; \
     UV_CACHE_DIR=/tmp/uv-cache UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR}" uv python install "${PYTHON_VERSION}"; \
     python_path="$(UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR}" uv python find "${PYTHON_VERSION}")"; \
     python_bin_dir="$(dirname "${python_path}")"; \
@@ -128,17 +128,23 @@ RUN set -eux; \
       export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
       export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
       apt-get update; \
-      apt-get install -y --no-install-recommends \
+      browser_packages=( \
+        chromium \
         fonts-liberation \
         fonts-noto-color-emoji \
-        novnc \
         openbox \
-        websockify \
-        x11vnc \
-        xvfb; \
-      OPENCLAW_NODE_ROOT="$(npm root -g)/openclaw/node_modules"; \
-      PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH}" \
-      node "${OPENCLAW_NODE_ROOT}/playwright-core/cli.js" install --with-deps chromium; \
+        xvfb \
+      ); \
+      if [[ "${INSTALL_VNC}" == "1" ]]; then \
+        browser_packages+=( \
+          novnc \
+          websockify \
+          x11vnc \
+        ); \
+      fi; \
+      apt-get install -y --no-install-recommends "${browser_packages[@]}"; \
+      ln -sf /usr/bin/chromium /usr/local/bin/google-chrome-stable; \
+      ln -sf /usr/bin/chromium /usr/local/bin/google-chrome; \
       rm -rf /var/lib/apt/lists/*; \
     fi
 
@@ -165,13 +171,12 @@ RUN set -eux; \
       /home/openclaw/.openclaw/workspace \
       /home/openclaw/.cache/uv \
       /home/openclaw/.config \
+      /home/openclaw/.config/chromium-profile \
       /home/openclaw/go \
-      /opt/ms-playwright \
       /opt/uv/python; \
     chown -R openclaw:"${group_name}" \
       /workspace \
       /home/openclaw \
-      /opt/ms-playwright \
       /opt/uv
 
 COPY docker/entrypoint.sh /usr/local/bin/container-entrypoint.sh
@@ -186,6 +191,6 @@ RUN chmod 0755 \
 USER openclaw
 WORKDIR /home/openclaw
 
-EXPOSE 18789 18790 5900 6080
+EXPOSE 18789 18790 5900 6080 9222
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/container-entrypoint.sh"]

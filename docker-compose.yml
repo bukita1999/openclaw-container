@@ -18,7 +18,7 @@ services:
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         ALL_PROXY: ${ALL_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
-    image: ${IMAGE_NAME:-openclaw-ubuntu:local}
+    image: ${IMAGE_NAME:-openclaw-debian:local}
     container_name: ${CONTAINER_NAME:-openclaw}
     hostname: ${OPENCLAW_CONTAINER_HOSTNAME:-openclaw}
     env_file:
@@ -31,7 +31,8 @@ services:
       OPENCLAW_BRIDGE_PORT: ${OPENCLAW_BRIDGE_PORT:-18790}
       UV_PYTHON_INSTALL_DIR: /opt/uv/python
       UV_CACHE_DIR: /home/openclaw/.cache/uv
-      PLAYWRIGHT_BROWSERS_PATH: /opt/ms-playwright
+      CHROMIUM_PROFILE_DIR: /home/openclaw/.config/chromium-profile
+      CHROMIUM_BIN: /usr/bin/chromium
       GOPATH: /home/openclaw/go
       DISPLAY: ${DISPLAY:-:99}
     ports:
@@ -39,13 +40,14 @@ services:
       # - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
       - "${VNC_PORT:-5900}:5900"
       - "${NOVNC_PORT:-6080}:6080"
+      - "${CHROMIUM_REMOTE_DEBUGGING_PORT:-9222}:9222"
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-./data/openclaw}:/home/openclaw/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-./data/workspace}:/home/openclaw/.openclaw/workspace
       - ${UV_CACHE_DIR_HOST:-./data/uv-cache}:/home/openclaw/.cache/uv
       - ${UV_PYTHON_DIR_HOST:-./data/uv-python}:/opt/uv/python
       - ${GO_PATH_HOST:-./data/go}:/home/openclaw/go
-      - ${PLAYWRIGHT_CACHE_HOST:-./data/playwright}:/opt/ms-playwright
+      - ${CHROMIUM_PROFILE_DIR_HOST:-./data/chromium-profile}:/home/openclaw/.config/chromium-profile
     init: true
     tty: true
     stdin_open: true

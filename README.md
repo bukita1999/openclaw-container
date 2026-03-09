@@ -1,6 +1,6 @@
-# OpenClaw Ubuntu Container
+# OpenClaw Debian Container
 
-这个仓库把 `OpenClaw`、`uv` 和可选的 `Chromium + VNC + noVNC`、`Go` 全部安装在容器内部，宿主机只需要 `Docker Engine + Docker Compose`。
+这个仓库把 `OpenClaw`、`uv` 和可选的 `CDP Browser + VNC + noVNC`、`Go` 全部安装在容器内部，宿主机只需要 `Docker Engine + Docker Compose`。
 
 仓库现在同时支持两种用法：
 
@@ -11,13 +11,13 @@
 
 ## 设计目标
 
-- 基础镜像固定为 `ubuntu:24.04`
+- 基础镜像固定为 `debian:12-slim`
 - `OpenClaw` 通过 `npm install -g openclaw@latest` 安装在镜像里
 - `uv` 通过官方安装脚本安装，并在镜像构建时预装一个由 `uv` 管理的 Python
 - `Go` 按官方 tarball 方式可选安装在镜像里
-- `Chromium + Xvfb + x11vnc + noVNC` 可选安装在镜像里
+- 可选浏览器通过 Debian `chromium` 包安装，并默认暴露 CDP
 - 代理通过 `.env` 注入，同时作用于构建阶段和运行阶段
-- OpenClaw 配置目录、workspace、uv 缓存、uv Python、Go 工作区、Playwright 浏览器缓存全部映射到宿主机
+- OpenClaw 配置目录、workspace、uv 缓存、uv Python、Go 工作区、Chromium profile 全部映射到宿主机
 - 同一份镜像可被多个机器人实例复用，真正变化的是配置和数据目录
 
 ## 为什么推荐多实例 Compose
@@ -49,7 +49,7 @@
 - `./data/uv-cache` -> `/home/openclaw/.cache/uv`
 - `./data/uv-python` -> `/opt/uv/python`
 - `./data/go` -> `/home/openclaw/go`
-- `./data/playwright` -> `/opt/ms-playwright`
+- `./data/chromium-profile` -> `/home/openclaw/.config/chromium-profile`
 
 OpenClaw 主配置文件路径：
 
@@ -115,7 +115,7 @@ instances/
     uv-cache/
     uv-python/
     go/
-    playwright/
+    chromium-profile/
   bot-example-2/
     .env
     openclaw/
@@ -124,7 +124,7 @@ instances/
     uv-cache/
     uv-python/
     go/
-    playwright/
+    chromium-profile/
 ```
 
 仓库提供了一个可复制模板：
@@ -161,7 +161,7 @@ docker compose build
 如果某个实例确实需要不同的镜像内容，例如只给某一个 bot 开启 `INSTALL_VNC=1`，那就不要和其他实例共用同一个 `IMAGE_NAME`。请给它单独设置镜像名，例如：
 
 ```env
-IMAGE_NAME=openclaw-ubuntu:bot-example-vnc
+IMAGE_NAME=openclaw-debian:bot-example-vnc
 ```
 
 然后再用该实例自己的 `.env` 构建和启动：
@@ -200,9 +200,12 @@ cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/op
 - `UV_CACHE_DIR_HOST=./instances/bot-example/uv-cache`
 - `UV_PYTHON_DIR_HOST=./instances/bot-example/uv-python`
 - `GO_PATH_HOST=./instances/bot-example/go`
-- `PLAYWRIGHT_CACHE_HOST=./instances/bot-example/playwright`
+- `CHROMIUM_PROFILE_DIR_HOST=./instances/bot-example/chromium-profile`
 - `OPENCLAW_GATEWAY_PORT` / `OPENCLAW_BRIDGE_PORT`
 - `VNC_PORT` / `NOVNC_PORT`
+- `CHROMIUM_HEADLESS`
+- `CHROMIUM_EXTRA_ARGS`
+- `CHROMIUM_REMOTE_DEBUGGING_PORT`
 - `OPENCLAW_GATEWAY_TOKEN`
 - `TELEGRAM_BOT_TOKEN`
 - `DISCORD_BOT_TOKEN`
@@ -286,7 +289,7 @@ docker compose --env-file ./instances/bot-example-2/.env -p bot-example-2 up -d
 - `VNC_PORT`
 - `NOVNC_PORT`
 
-第一次上手建议连缓存目录也全部隔离。先保证不串数据、不互相污染，等跑稳以后再考虑是否共享 `uv-python` 或 `playwright`。
+第一次上手建议连缓存目录也全部隔离。先保证不串数据、不互相污染，等跑稳以后再考虑是否共享 `uv-python` 或 `chromium-profile`。
 
 ### 为什么这里不推荐 `docker compose up --scale`
 
@@ -312,11 +315,12 @@ INSTALL_CHROMIUM=1
 INSTALL_VNC=1
 ```
 
-运行期如果要启动 VNC/noVNC 与可视 Chromium，再打开：
+运行期如果要启动 VNC/noVNC 与 Chromium，再打开：
 
 ```env
 ENABLE_VNC=1
 START_CHROMIUM=1
+CHROMIUM_HEADLESS=0
 ```
 
 然后重新启动对应实例：
@@ -336,6 +340,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example up -d
 - OpenClaw Gateway: `http://127.0.0.1:18789`
 - noVNC: `http://127.0.0.1:6080/vnc.html`
 - VNC: `127.0.0.1:5900`
+- Chromium CDP: `http://127.0.0.1:9222/json/version`
 
 多实例时请务必给每个实例分配不冲突的主机端口。
 
@@ -365,10 +370,10 @@ USE_SJTUG_MIRROR=1
 注意：
 
 - `.env` 能控制容器内的构建和运行时网络访问
-- Docker 守护进程自己拉取 `ubuntu:24.04`、安装阶段访问远程 registry 时，如果宿主机 Docker daemon 本身也需要代理，仍然要单独配置宿主机 Docker 的代理
-- `USE_SJTUG_MIRROR=1` 目前会在构建阶段把 Ubuntu `archive/ports` 软件源切到 SJTUG，并让 `npm install` 使用 `https://mirrors.sjtug.sjtu.edu.cn/npm-registry`
+- Docker 守护进程自己拉取 `debian:12-slim`、安装阶段访问远程 registry 时，如果宿主机 Docker daemon 本身也需要代理，仍然要单独配置宿主机 Docker 的代理
+- `USE_SJTUG_MIRROR=1` 目前会在构建阶段把 Debian 软件源切到 SJTUG，并让 `npm install` 使用 `https://mirrors.sjtug.sjtu.edu.cn/npm-registry`
 - 因为 SJTUG 的 `apt` 源走 HTTPS，Dockerfile 里会先安装 `ca-certificates` 再切换镜像，避免证书缺失导致 `apt-get update` 失败
-- Ubuntu 安全更新源 `security.ubuntu.com` 仍保持官方地址，以便更快拿到最新安全更新
+- Debian security 源也会一起切到 SJTUG；如果你更看重安全更新时效，可以保持 `USE_SJTUG_MIRROR=0`
 
 ## 迁移方案
 
@@ -380,7 +385,7 @@ USE_SJTUG_MIRROR=1
 - `instances/bot-example/openclaw/`
 - `instances/bot-example/workspace/`
 
-其余如 `uv-cache`、`uv-python`、`playwright` 可以一起迁，也可以在新机器重建。
+其余如 `uv-cache`、`uv-python`、`chromium-profile` 可以一起迁，也可以在新机器重建。
 
 ### 推荐迁移步骤
 
@@ -495,3 +500,4 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example exec openc
 - `openclaw` npm 最新版本：`2026.3.7`
 - `Go` 最新版本：`1.26.1`
 - `OpenClaw` 官方要求运行时：`Node >= 22`
+- `./data/chromium-profile` -> `/home/openclaw/.config/chromium-profile`

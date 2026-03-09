@@ -106,7 +106,7 @@ mkdir -p \
   "${HOME}/.openclaw/workspace" \
   "${HOME}/.cache/uv" \
   "${HOME}/go" \
-  "${PLAYWRIGHT_BROWSERS_PATH:-/opt/ms-playwright}" \
+  "${CHROMIUM_PROFILE_DIR:-${HOME}/.config/chromium-profile}" \
   "${UV_PYTHON_INSTALL_DIR:-/opt/uv/python}"
 configure_channel_tokens
 start_optional_browser_stack
