@@ -88,16 +88,75 @@ configure_channel_tokens() {
 }
 
 start_optional_browser_stack() {
-  if [[ "${ENABLE_VNC:-0}" == "1" || "${START_CHROMIUM:-0}" == "1" ]]; then
+  if [[ "${ENABLE_VNC:-0}" == "1" || "${START_CHROMIUM:-0}" == "1" || "${OPENCLAW_BROWSER_AUTOSTART:-0}" == "1" ]]; then
     /usr/local/bin/start-browser-stack.sh &
   fi
 }
 
-default_cmd() {
-  exec openclaw gateway \
+wait_for_gateway() {
+  local host="${1:-127.0.0.1}"
+  local port="${2:-18789}"
+  local retries="${3:-60}"
+  local i
+
+  for ((i=0; i<retries; i++)); do
+    if bash -lc "exec 3<>/dev/tcp/${host}/${port}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
+auto_start_openclaw_browser() {
+  if [[ "${OPENCLAW_BROWSER_AUTOSTART:-0}" != "1" ]]; then
+    return 0
+  fi
+
+  if [[ ! -x "${CHROMIUM_BIN:-/usr/bin/chromium}" ]] && ! command -v chromium >/dev/null 2>&1; then
+    echo "Skipping OpenClaw browser autostart because Chromium is not installed. Rebuild with INSTALL_CHROMIUM=1." >&2
+    return 0
+  fi
+
+  if ! wait_for_gateway "127.0.0.1" "${OPENCLAW_GATEWAY_PORT:-18789}" "${OPENCLAW_BROWSER_AUTOSTART_WAIT_SECONDS:-60}"; then
+    echo "Skipping OpenClaw browser autostart because the gateway did not become ready in time." >&2
+    return 0
+  fi
+
+  local browser_start_args=()
+  local attempt
+  local max_attempts="${OPENCLAW_BROWSER_AUTOSTART_RETRIES:-15}"
+  local retry_delay="${OPENCLAW_BROWSER_AUTOSTART_RETRY_DELAY_SECONDS:-2}"
+  if [[ -n "${OPENCLAW_GATEWAY_TOKEN:-}" ]]; then
+    browser_start_args+=(--token "${OPENCLAW_GATEWAY_TOKEN}")
+  fi
+
+  for ((attempt=1; attempt<=max_attempts; attempt++)); do
+    if openclaw browser start "${browser_start_args[@]}"; then
+      return 0
+    fi
+    if (( attempt < max_attempts )); then
+      sleep "${retry_delay}"
+    fi
+  done
+
+  echo "OpenClaw browser autostart failed after ${max_attempts} attempts." >&2
+}
+
+run_gateway_with_browser_autostart() {
+  openclaw gateway \
     --bind "${OPENCLAW_GATEWAY_BIND:-loopback}" \
     --port "${OPENCLAW_GATEWAY_PORT:-18789}" \
-    --allow-unconfigured
+    --allow-unconfigured \
+    "$@" &
+  local gateway_pid=$!
+
+  trap 'kill "${gateway_pid}" >/dev/null 2>&1 || true; wait "${gateway_pid}" >/dev/null 2>&1 || true' EXIT INT TERM
+
+  auto_start_openclaw_browser
+
+  wait "${gateway_pid}"
 }
 
 sync_proxy_env
@@ -112,7 +171,8 @@ configure_channel_tokens
 start_optional_browser_stack
 
 if [[ $# -eq 0 ]]; then
-  default_cmd
+  run_gateway_with_browser_autostart
+  exit $?
 fi
 
 case "${1:-}" in
@@ -120,5 +180,11 @@ case "${1:-}" in
     set -- openclaw "$@"
     ;;
 esac
+
+if [[ "${1:-}" == "openclaw" && "${2:-}" == "gateway" ]]; then
+  shift 2
+  run_gateway_with_browser_autostart "$@"
+  exit $?
+fi
 
 exec "$@"

@@ -2,6 +2,8 @@
 
 这个仓库把 `OpenClaw`、`uv` 和可选的 `CDP Browser + VNC + noVNC`、`Go` 全部安装在容器内部，宿主机只需要 `Docker Engine + Docker Compose`。
 
+默认模板现在会在容器启动后直接拉起容器内 Chromium，并把 OpenClaw browser tool 绑定到本地 CDP。也就是说，只要按模板启动，`docker compose up -d` 之后就可以直接用浏览器工具，不需要再手工进容器执行 `openclaw browser start`。
+
 仓库现在同时支持两种用法：
 
 - 单实例：沿用根目录 `.env` 和 `data/*`
@@ -315,11 +317,17 @@ INSTALL_CHROMIUM=1
 INSTALL_VNC=1
 ```
 
-运行期如果要启动 VNC/noVNC 与 Chromium，再打开：
+默认模板已经会在容器启动后直接拉起 Chromium，并让 OpenClaw browser tool 连接到：
+
+```env
+START_CHROMIUM=1
+CHROMIUM_REMOTE_DEBUGGING_PORT=9222
+```
+
+如果你还要额外打开 VNC/noVNC 观察桌面，再打开：
 
 ```env
 ENABLE_VNC=1
-START_CHROMIUM=1
 CHROMIUM_HEADLESS=0
 ```
 
@@ -340,6 +348,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example up -d
 - OpenClaw Gateway: `http://127.0.0.1:18789`
 - noVNC: `http://127.0.0.1:6080/vnc.html`
 - VNC: `127.0.0.1:5900`
+- OpenClaw browser tool: 默认连接 `http://127.0.0.1:9222`
 - Chromium CDP: `http://127.0.0.1:9222/json/version`
 
 多实例时请务必给每个实例分配不冲突的主机端口。

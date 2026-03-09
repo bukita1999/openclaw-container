@@ -83,5 +83,9 @@
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
+  },
+  "browser": {
+    "enabled": true,
+    "cdpUrl": "http://127.0.0.1:${CHROMIUM_REMOTE_DEBUGGING_PORT}"
   }
 }
