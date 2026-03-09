@@ -6,7 +6,7 @@ FROM ${BASE_IMAGE} AS openclaw-base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG USE_SJTUG_MIRROR=0
+ARG USE_SJTUG_MIRROR=1
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG ALL_PROXY
