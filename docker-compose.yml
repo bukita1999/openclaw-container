@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-openclaw-runtime}
       args:
         NODE_MAJOR: ${NODE_MAJOR:-22}
         OPENCLAW_VERSION: ${OPENCLAW_VERSION:-latest}
@@ -36,11 +37,7 @@ services:
       GOPATH: /home/openclaw/go
       DISPLAY: ${DISPLAY:-:99}
     ports:
-      # - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
-      # - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
-      - "${VNC_PORT:-5900}:5900"
       - "${NOVNC_PORT:-6080}:6080"
-      - "${CHROMIUM_REMOTE_DEBUGGING_PORT:-9222}:9222"
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-./data/openclaw}:/home/openclaw/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-./data/workspace}:/home/openclaw/.openclaw/workspace

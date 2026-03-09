@@ -145,6 +145,7 @@ instances/
 
 默认建议所有实例共用同一份镜像，也就是这些构建期变量保持一致：
 
+- `BUILD_TARGET`
 - `NODE_MAJOR`
 - `OPENCLAW_VERSION`
 - `PYTHON_VERSION`
@@ -158,6 +159,25 @@ instances/
 
 ```bash
 docker compose build
+```
+
+`BUILD_TARGET` 用来控制构建到哪个阶段（默认 `openclaw-runtime`）。当前 Dockerfile 的阶段是：
+
+- `openclaw-base`：Debian 基础依赖 + apt-fast + Node.js + tini
+- `openclaw-core`：在 `base` 上安装 OpenClaw + uv + Python
+- `openclaw-runtime`：在 `core` 上安装可选 Go/Chromium/VNC，并完成用户和入口脚本
+
+如果你只是验证前半段是否成功，不想每次都走完整镜像，可以直接临时指定阶段：
+
+```bash
+BUILD_TARGET=openclaw-base docker compose build
+BUILD_TARGET=openclaw-core docker compose build
+```
+
+验证通过后再切回完整构建：
+
+```bash
+BUILD_TARGET=openclaw-runtime docker compose build
 ```
 
 如果某个实例确实需要不同的镜像内容，例如只给某一个 bot 开启 `INSTALL_VNC=1`，那就不要和其他实例共用同一个 `IMAGE_NAME`。请给它单独设置镜像名，例如：
@@ -324,12 +344,16 @@ START_CHROMIUM=1
 CHROMIUM_REMOTE_DEBUGGING_PORT=9222
 ```
 
+`CHROMIUM_REMOTE_DEBUGGING_PORT` 默认只在容器内监听，不会发布到宿主机。
+
 如果你还要额外打开 VNC/noVNC 观察桌面，再打开：
 
 ```env
 ENABLE_VNC=1
 CHROMIUM_HEADLESS=0
 ```
+
+`VNC_PORT` 默认只在容器内监听，不会发布到宿主机；`NOVNC_PORT` 会继续发布到宿主机，供外部访问桌面。
 
 然后重新启动对应实例：
 

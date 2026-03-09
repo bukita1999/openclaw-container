@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7-labs
-FROM debian:12-slim
+ARG BASE_IMAGE=debian:12-slim
+
+FROM ${BASE_IMAGE} AS openclaw-base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -119,6 +121,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-fast install -y --no-install-recommends nodejs tini; \
     corepack enable
 
+FROM openclaw-base AS openclaw-core
+
+ARG USE_SJTUG_MIRROR=0
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG ALL_PROXY
+ARG NO_PROXY
 ARG OPENCLAW_VERSION=latest
 
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
@@ -157,8 +166,18 @@ RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
     if [[ -x "${python_bin_dir}/pip" ]]; then ln -sf "${python_bin_dir}/pip" /usr/local/bin/pip; fi; \
     if [[ -x "${python_bin_dir}/pip3" ]]; then ln -sf "${python_bin_dir}/pip3" /usr/local/bin/pip3; fi
 
+FROM openclaw-core AS openclaw-runtime
+
 ARG INSTALL_GO=0
 ARG GO_VERSION=1.26.1
+ARG INSTALL_CHROMIUM=1
+ARG INSTALL_VNC=1
+ARG USER_UID=1000
+ARG USER_GID=1000
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG ALL_PROXY
+ARG NO_PROXY
 
 RUN --mount=type=cache,target=/tmp/downloads,sharing=locked \
     set -eux; \
@@ -177,9 +196,6 @@ RUN --mount=type=cache,target=/tmp/downloads,sharing=locked \
       rm -rf /usr/local/go; \
       tar -C /usr/local -xzf "${go_tarball}"; \
     fi
-
-ARG INSTALL_CHROMIUM=1
-ARG INSTALL_VNC=1
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -212,9 +228,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       apt-fast update; \
       apt-fast install -y --no-install-recommends novnc websockify x11vnc; \
     fi
-
-ARG USER_UID=1000
-ARG USER_GID=1000
 
 RUN set -eux; \
     if getent group "${USER_GID}" >/dev/null; then \
