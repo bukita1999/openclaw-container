@@ -5,7 +5,7 @@
 This repository packages an OpenClaw runtime image and instance templates rather than application source code. Keep changes scoped to the layer they affect:
 
 - `Dockerfile`: multi-stage image definition (`openclaw-base`, `openclaw-core`, `openclaw-runtime`), package installation, and optional components such as Chromium, VNC, and Go.
-- `docker-compose.yml`: the single service definition, mounts, ports, build args, and `build.target` controlled by `BUILD_TARGET`.
+- `docker-compose.yml`: the single service definition, `env_file` wiring, mounts, the published noVNC port, build args, and `build.target` controlled by `BUILD_TARGET`.
 - `docker/`: Bash entrypoints and startup helpers used inside the container.
 - `data/`: default single-instance runtime directories; commit only tracked examples such as `data/openclaw/openclaw.json.example`.
 - `instances/_template/`: starter files for multi-instance setups. Copy this directory when adding a new bot instance.
@@ -27,7 +27,7 @@ Use Docker Compose as the main workflow:
 
 ## Coding Style & Naming Conventions
 
-Shell scripts use `bash`, `set -euo pipefail`, 2-space-to-4-space aligned indentation, and lowercase snake_case function names such as `configure_channel_tokens`. Prefer explicit environment variable names in uppercase. Keep Compose and `.env.example` keys aligned; when adding an instance path, mirror the existing `instances/<name>/...` naming pattern.
+Shell scripts use `bash`, `set -euo pipefail`, 2-space-to-4-space aligned indentation, and lowercase snake_case function names such as `configure_channel_tokens`. Prefer explicit environment variable names in uppercase. Keep `docker-compose.yml`, `.env.example`, and `instances/_template/.env.example` keys aligned, including runtime proxy flags such as `NODE_USE_ENV_PROXY`; when adding an instance path, mirror the existing `instances/<name>/...` naming pattern.
 
 ## Testing Guidelines
 
@@ -37,7 +37,7 @@ There is no dedicated automated test suite in this repository today. For every c
 - `BUILD_TARGET=openclaw-core docker compose build` when debugging OpenClaw/uv/Python installation issues.
 - `BUILD_TARGET=openclaw-runtime docker compose build` before release or shared usage.
 
-After full build, confirm the container starts cleanly with `docker compose up -d` and `docker compose logs -f`. If you modify multi-instance behavior, validate with `--env-file ./instances/<name>/.env -p <name>`.
+After full build, confirm the container starts cleanly with `docker compose up -d` and `docker compose logs -f`. If you modify multi-instance behavior, validate with `docker compose --env-file ./instances/<name>/.env -p <name> config` and `docker compose --env-file ./instances/<name>/.env -p <name> up -d`.
 
 ## Commit & Pull Request Guidelines
 
@@ -45,4 +45,4 @@ Recent history favors short, imperative commit subjects, sometimes in Chinese, f
 
 ## Security & Configuration Tips
 
-Do not commit real `.env` files, runtime `openclaw.json`, tokens, or populated `data/` and `instances/*/` directories. Keep `OPENCLAW_GATEWAY_BIND=loopback` unless external exposure is intentional, and document any new port or proxy requirement in both `README.md` and the corresponding example config.
+Do not commit real `.env` files, runtime `openclaw.json`, tokens, or populated `data/` and `instances/*/` directories. Keep `OPENCLAW_GATEWAY_BIND=loopback` unless external exposure is intentional, and document any new port or proxy requirement in both `README.md` and the corresponding example config. If you add or change proxy handling, update both root and instance examples so Node.js runtime behavior stays consistent with build-time proxy settings.

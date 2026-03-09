@@ -27,6 +27,7 @@ services:
     environment:
       HOME: /home/openclaw
       TERM: xterm-256color
+      NODE_USE_ENV_PROXY: ${NODE_USE_ENV_PROXY:-1}
       OPENCLAW_GATEWAY_BIND: ${OPENCLAW_GATEWAY_BIND:-loopback}
       OPENCLAW_GATEWAY_PORT: ${OPENCLAW_GATEWAY_PORT:-18789}
       OPENCLAW_BRIDGE_PORT: ${OPENCLAW_BRIDGE_PORT:-18790}

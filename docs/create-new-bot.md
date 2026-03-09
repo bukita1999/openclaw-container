@@ -37,6 +37,19 @@ container-internal use by default and do not need unique host mappings for
 multi-instance setups. `NOVNC_PORT` remains published so you can access the
 desktop from outside the container.
 
+If the bot needs an outbound proxy, set these in the instance `.env` too:
+
+```env
+HTTP_PROXY=http://host.docker.internal:7890
+HTTPS_PROXY=http://host.docker.internal:7890
+ALL_PROXY=http://host.docker.internal:7890
+NO_PROXY=127.0.0.1,localhost
+NODE_USE_ENV_PROXY=1
+```
+
+`NODE_USE_ENV_PROXY=1` makes Node.js runtime requests reuse the proxy
+environment variables, which matters for dependencies that use native `fetch`.
+
 At least one channel token must be non-empty:
 
 - `TELEGRAM_BOT_TOKEN`, or
@@ -54,7 +67,7 @@ If the file contains `${VAR}` placeholders, the matching variables in `.env` mus
 
 ```bash
 docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot config
-docker compose build
+docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot build
 docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot up -d
 docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot logs -f
 ```
@@ -68,7 +81,11 @@ docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot exec openclaw 
 ## 5. Common Mistakes
 
 - Reusing another bot's ports or mounted directories.
+- Running `docker compose build` without the instance `--env-file`, which can
+  silently build with the wrong config.
 - Leaving `INSTANCE_ENV_FILE` pointed at the wrong `.env`.
 - Forgetting to copy `openclaw.json.example` to `openclaw.json`.
 - Starting with both `TELEGRAM_BOT_TOKEN` and `DISCORD_BOT_TOKEN` empty.
+- Setting proxy URLs but forgetting `NODE_USE_ENV_PROXY=1`, so some Node.js
+  requests bypass the proxy.
 - Using `docker compose up --scale`; this repo needs parameterized instances, not identical replicas.

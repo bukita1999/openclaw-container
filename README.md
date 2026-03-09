@@ -386,6 +386,7 @@ HTTP_PROXY=http://host.docker.internal:7890
 HTTPS_PROXY=http://host.docker.internal:7890
 ALL_PROXY=http://host.docker.internal:7890
 NO_PROXY=127.0.0.1,localhost
+NODE_USE_ENV_PROXY=1
 ```
 
 如果你希望构建阶段优先使用交大镜像，可额外设置：
@@ -399,6 +400,7 @@ USE_SJTUG_MIRROR=1
 - 作为 `docker compose build` 的 build args 传入 Dockerfile
 - 作为容器运行时环境变量注入
 - 在容器入口脚本里同步到 `git` 和 `npm` 用户级配置
+- 让 Node.js 运行时的原生 `fetch` 也自动复用这些代理环境变量，避免 Discord 这类依赖 Undici `fetch` 的请求绕过代理
 
 注意：
 
