@@ -12,6 +12,8 @@ mv instances/bot-mybot/.env.example instances/bot-mybot/.env
 cp instances/bot-mybot/openclaw/openclaw.json.example instances/bot-mybot/openclaw/openclaw.json
 ```
 
+The root [.env](/home/cao/docker-compose/openclaw-container/.env) remains the shared default for image build/install options such as `INSTALL_CHROMIUM`, `INSTALL_VNC`, `OPENCLAW_VERSION`, and `PYTHON_VERSION`. Build the shared image from the root config first; the instance `.env` should usually only override runtime behavior.
+
 ## 2. Edit the Instance `.env`
 
 Update [instances/bot-mybot/.env](/home/cao/docker-compose/openclaw-container/instances/bot-mybot/.env) so every path and identity points to the new instance:
@@ -34,8 +36,26 @@ Also set unique host ports if you choose to publish them yourself:
 
 `VNC_PORT` and `CHROMIUM_REMOTE_DEBUGGING_PORT` are now intended for
 container-internal use by default and do not need unique host mappings for
-multi-instance setups. `NOVNC_PORT` remains published so you can access the
+multi-instance setups. noVNC always listens on container port `6080`; `NOVNC_PORT` remains published so you can access the
 desktop from outside the container.
+
+Do not copy shared build defaults into the instance `.env` unless this bot truly
+needs a different image. In most cases, leave these values in the root
+[.env](/home/cao/docker-compose/openclaw-container/.env):
+
+- `BUILD_TARGET`
+- `IMAGE_NAME`
+- `NODE_MAJOR`
+- `OPENCLAW_VERSION`
+- `PYTHON_VERSION`
+- `INSTALL_CHROMIUM`
+- `INSTALL_VNC`
+- `INSTALL_GO`
+- `GO_VERSION`
+- `USE_SJTUG_MIRROR`
+- `USER_UID`
+- `USER_GID`
+- `TZ`
 
 If the bot needs an outbound proxy, set these in the instance `.env` too:
 
@@ -67,10 +87,14 @@ If the file contains `${VAR}` placeholders, the matching variables in `.env` mus
 
 ```bash
 docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot config
-docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot build
 docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot up -d
 docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot logs -f
 ```
+
+Only run `docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot build`
+if that bot intentionally overrides shared build variables or you changed files
+that are baked into the image, such as `Dockerfile` or scripts under `docker/`.
+For normal bot creation, one shared build is enough and `up -d` can reuse it.
 
 Open a shell in the container if needed:
 
@@ -81,8 +105,10 @@ docker compose --env-file ./instances/bot-mybot/.env -p bot-mybot exec openclaw 
 ## 5. Common Mistakes
 
 - Reusing another bot's ports or mounted directories.
-- Running `docker compose build` without the instance `--env-file`, which can
-  silently build with the wrong config.
+- Copying build-only settings such as `INSTALL_VNC` into every bot `.env`, which
+  makes routine instance creation look like it needs per-bot rebuilds.
+- Running a per-bot `docker compose build` even though the shared image already
+  has the required capabilities.
 - Leaving `INSTANCE_ENV_FILE` pointed at the wrong `.env`.
 - Forgetting to copy `openclaw.json.example` to `openclaw.json`.
 - Starting with both `TELEGRAM_BOT_TOKEN` and `DISCORD_BOT_TOKEN` empty.

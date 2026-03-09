@@ -15,6 +15,7 @@ This repository packages an OpenClaw runtime image and instance templates rather
 Use Docker Compose as the main workflow:
 
 - `cp .env.example .env`: create the default local config.
+- Treat the root `.env` as the shared build/default config. Per-bot instance files under `instances/<name>/.env` should mainly contain runtime overrides such as names, mounts, tokens, and published ports.
 - `docker compose config`: validate Compose interpolation before starting anything.
 - `docker compose build`: rebuild the image after changing `Dockerfile`, build args, or startup scripts (defaults to `BUILD_TARGET=openclaw-runtime`).
 - `BUILD_TARGET=openclaw-base docker compose build`: quickly validate Debian base setup, apt sources, apt-fast, and Node.js install.
@@ -27,7 +28,7 @@ Use Docker Compose as the main workflow:
 
 ## Coding Style & Naming Conventions
 
-Shell scripts use `bash`, `set -euo pipefail`, 2-space-to-4-space aligned indentation, and lowercase snake_case function names such as `configure_channel_tokens`. Prefer explicit environment variable names in uppercase. Keep `docker-compose.yml`, `.env.example`, and `instances/_template/.env.example` keys aligned, including runtime proxy flags such as `NODE_USE_ENV_PROXY`; when adding an instance path, mirror the existing `instances/<name>/...` naming pattern.
+Shell scripts use `bash`, `set -euo pipefail`, 2-space-to-4-space aligned indentation, and lowercase snake_case function names such as `configure_channel_tokens`. Prefer explicit environment variable names in uppercase. Keep `docker-compose.yml`, `.env.example`, and `instances/_template/.env.example` keys aligned, including runtime proxy flags such as `NODE_USE_ENV_PROXY`; when adding an instance path, mirror the existing `instances/<name>/...` naming pattern. Keep build-time knobs such as `INSTALL_CHROMIUM`, `INSTALL_VNC`, `INSTALL_GO`, `OPENCLAW_VERSION`, and `PYTHON_VERSION` documented in the root `.env.example`; only mention them in instance examples as optional overrides because changing them requires a rebuild.
 
 ## Testing Guidelines
 
@@ -45,4 +46,4 @@ Recent history favors short, imperative commit subjects, sometimes in Chinese, f
 
 ## Security & Configuration Tips
 
-Do not commit real `.env` files, runtime `openclaw.json`, tokens, or populated `data/` and `instances/*/` directories. Keep `OPENCLAW_GATEWAY_BIND=loopback` unless external exposure is intentional, and document any new port or proxy requirement in both `README.md` and the corresponding example config. If you add or change proxy handling, update both root and instance examples so Node.js runtime behavior stays consistent with build-time proxy settings.
+Do not commit real `.env` files, runtime `openclaw.json`, tokens, or populated `data/` and `instances/*/` directories. Keep `OPENCLAW_GATEWAY_BIND=loopback` unless external exposure is intentional, and document any new port or proxy requirement in both `README.md` and the corresponding example config. If you add or change proxy handling, update both root and instance examples so Node.js runtime behavior stays consistent with build-time proxy settings. noVNC should keep listening on container port `6080`; multi-instance access is handled by unique host-side `NOVNC_PORT` mappings in each bot's `.env`.
