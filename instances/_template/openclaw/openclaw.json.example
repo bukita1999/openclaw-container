@@ -58,12 +58,16 @@
       "enabled": true,
       "token": "${DISCORD_BOT_TOKEN}",
       "proxy": "${HTTPS_PROXY}",
+      "allowFrom": [
+        "347639339007737867",
+        "798389786888896552"
+      ],
       "groupPolicy": "allowlist",
-      "dmPolicy": "pairing",
+      "dmPolicy": "allowlist",
       "guilds": {
-        "1480056048114073732": {
+        "798389786888896552": {
           "channels": {
-            "1480100269285966025": {
+            "863446569360687124": {
               "allow": true,
               "requireMention": false
             }

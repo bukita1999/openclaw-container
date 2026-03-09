@@ -1,17 +1,9 @@
+# syntax=docker/dockerfile:1.7-labs
 FROM debian:12-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG NODE_MAJOR=22
-ARG OPENCLAW_VERSION=latest
-ARG PYTHON_VERSION=3.12
-ARG INSTALL_CHROMIUM=1
-ARG INSTALL_VNC=1
-ARG INSTALL_GO=0
-ARG GO_VERSION=1.26.1
-ARG USER_UID=1000
-ARG USER_GID=1000
 ARG USE_SJTUG_MIRROR=0
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -29,8 +21,18 @@ ENV TZ=Etc/UTC \
     GOPATH=/home/openclaw/go \
     PATH=/usr/local/go/bin:/home/openclaw/go/bin:/home/openclaw/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
-RUN set -eux; \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
     mkdir -p /etc/apt/apt.conf.d; \
+    rm -f /etc/apt/apt.conf.d/docker-clean; \
+    printf '%s\n' \
+      'Acquire::Retries "5";' \
+      'Acquire::Languages "none";' \
+      'APT::Install-Recommends "0";' \
+      'APT::Install-Suggests "0";' \
+      'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
+      > /etc/apt/apt.conf.d/80buildkit-cache; \
     : > /etc/apt/apt.conf.d/99proxy; \
     if [[ -n "${HTTP_PROXY:-}" ]]; then \
       echo "Acquire::http::Proxy \"${HTTP_PROXY}\";" >> /etc/apt/apt.conf.d/99proxy; \
@@ -42,6 +44,7 @@ RUN set -eux; \
     export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
+      aria2 \
       ca-certificates \
       curl \
       gnupg; \
@@ -60,7 +63,37 @@ RUN set -eux; \
       done; \
       apt-get update; \
     fi; \
-    apt-get install -y --no-install-recommends \
+    curl -fsSL https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast -o /usr/local/sbin/apt-fast; \
+    chmod 0755 /usr/local/sbin/apt-fast; \
+    curl -fsSL https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast.conf -o /etc/apt-fast.conf; \
+    if [[ "${USE_SJTUG_MIRROR}" == "1" ]]; then \
+      apt_fast_mirrors=( \
+        "https://mirror.sjtu.edu.cn/debian" \
+        "https://mirror.sjtu.edu.cn/debian-security" \
+      ); \
+    else \
+      apt_fast_mirrors=( \
+        "http://deb.debian.org/debian" \
+        "http://deb.debian.org/debian-security" \
+      ); \
+    fi; \
+    { \
+      echo; \
+      echo "_APTMGR=apt-get"; \
+      echo "DOWNLOADBEFORE=true"; \
+      echo "_MAXNUM=8"; \
+      echo "_MAXCONPERSRV=8"; \
+      echo "_SPLITCON=8"; \
+      echo "_MINSPLITSZ=1M"; \
+      echo "DLDIR='/var/cache/apt/apt-fast'"; \
+      printf "MIRRORS=("; \
+      for mirror in "${apt_fast_mirrors[@]}"; do \
+        printf " '%s'" "${mirror}"; \
+      done; \
+      printf " )\n"; \
+    } >> /etc/apt-fast.conf; \
+    apt-fast update; \
+    apt-fast install -y --no-install-recommends \
       bash-completion \
       git \
       jq \
@@ -70,45 +103,65 @@ RUN set -eux; \
       tzdata \
       unzip \
       xz-utils; \
-    locale-gen en_US.UTF-8; \
-    rm -rf /var/lib/apt/lists/*
+    locale-gen en_US.UTF-8
 
-RUN set -eux; \
+ARG NODE_MAJOR=22
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
     export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
     export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
-    npm_registry_args=(); \
-    if [[ "${USE_SJTUG_MIRROR}" == "1" ]]; then \
-      npm_registry_args+=(--registry=https://mirrors.sjtug.sjtu.edu.cn/npm-registry); \
-    fi; \
     install -m 0755 -d /etc/apt/keyrings; \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg; \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends nodejs tini; \
-    corepack enable; \
-    if ! npm install -g "${npm_registry_args[@]}" "openclaw@${OPENCLAW_VERSION}"; then \
-      apt-get update; \
-      apt-get install -y --no-install-recommends build-essential cmake; \
-      npm install -g "${npm_registry_args[@]}" "openclaw@${OPENCLAW_VERSION}"; \
+    apt-fast update; \
+    apt-fast install -y --no-install-recommends nodejs tini; \
+    corepack enable
+
+ARG OPENCLAW_VERSION=latest
+
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
+    export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
+    export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
+    npm_install_args=( --prefer-offline --no-audit --no-fund ); \
+    if [[ "${USE_SJTUG_MIRROR}" == "1" ]]; then \
+      npm_install_args+=( --registry=https://mirrors.sjtug.sjtu.edu.cn/npm-registry ); \
     fi; \
-    npm cache clean --force; \
-    rm -rf /var/lib/apt/lists/*
+    if ! npm install -g "${npm_install_args[@]}" "openclaw@${OPENCLAW_VERSION}"; then \
+      apt-fast update; \
+      apt-fast install -y --no-install-recommends build-essential cmake; \
+      npm install -g "${npm_install_args[@]}" "openclaw@${OPENCLAW_VERSION}"; \
+    fi
 
 RUN set -eux; \
     export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
     export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
-    curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL=/usr/local/bin sh; \
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL=/usr/local/bin sh
+
+ARG PYTHON_VERSION=3.12
+
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
+    set -eux; \
+    export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
+    export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
     mkdir -p "${UV_PYTHON_INSTALL_DIR}" /opt/uv; \
-    UV_CACHE_DIR=/tmp/uv-cache UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR}" uv python install "${PYTHON_VERSION}"; \
+    UV_CACHE_DIR=/root/.cache/uv UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR}" uv python install "${PYTHON_VERSION}"; \
     python_path="$(UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR}" uv python find "${PYTHON_VERSION}")"; \
     python_bin_dir="$(dirname "${python_path}")"; \
     ln -sf "${python_path}" /usr/local/bin/python; \
     ln -sf "${python_path}" /usr/local/bin/python3; \
     if [[ -x "${python_bin_dir}/pip" ]]; then ln -sf "${python_bin_dir}/pip" /usr/local/bin/pip; fi; \
-    if [[ -x "${python_bin_dir}/pip3" ]]; then ln -sf "${python_bin_dir}/pip3" /usr/local/bin/pip3; fi; \
-    rm -rf /tmp/uv-cache
+    if [[ -x "${python_bin_dir}/pip3" ]]; then ln -sf "${python_bin_dir}/pip3" /usr/local/bin/pip3; fi
 
-RUN set -eux; \
+ARG INSTALL_GO=0
+ARG GO_VERSION=1.26.1
+
+RUN --mount=type=cache,target=/tmp/downloads,sharing=locked \
+    set -eux; \
     if [[ "${INSTALL_GO}" == "1" ]]; then \
       export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
       export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
@@ -117,36 +170,51 @@ RUN set -eux; \
         arm64) go_arch="arm64" ;; \
         *) echo "Unsupported architecture for Go" >&2; exit 1 ;; \
       esac; \
-      curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${go_arch}.tar.gz" -o /tmp/go.tar.gz; \
+      go_tarball="/tmp/downloads/go${GO_VERSION}.linux-${go_arch}.tar.gz"; \
+      if [[ ! -f "${go_tarball}" ]]; then \
+        curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${go_arch}.tar.gz" -o "${go_tarball}"; \
+      fi; \
       rm -rf /usr/local/go; \
-      tar -C /usr/local -xzf /tmp/go.tar.gz; \
-      rm -f /tmp/go.tar.gz; \
+      tar -C /usr/local -xzf "${go_tarball}"; \
     fi
 
-RUN set -eux; \
+ARG INSTALL_CHROMIUM=1
+ARG INSTALL_VNC=1
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
     if [[ "${INSTALL_CHROMIUM}" == "1" || "${INSTALL_VNC}" == "1" ]]; then \
       export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
       export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
-      apt-get update; \
-      browser_packages=( \
-        chromium \
-        fonts-liberation \
-        fonts-noto-color-emoji \
-        openbox \
-        xvfb \
-      ); \
-      if [[ "${INSTALL_VNC}" == "1" ]]; then \
-        browser_packages+=( \
-          novnc \
-          websockify \
-          x11vnc \
-        ); \
-      fi; \
-      apt-get install -y --no-install-recommends "${browser_packages[@]}"; \
+      apt-fast update; \
+      apt-fast install -y --no-install-recommends openbox xvfb; \
+    fi
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
+    if [[ "${INSTALL_CHROMIUM}" == "1" ]]; then \
+      export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
+      export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
+      apt-fast update; \
+      apt-fast install -y --no-install-recommends chromium fonts-liberation fonts-noto-color-emoji; \
       ln -sf /usr/bin/chromium /usr/local/bin/google-chrome-stable; \
       ln -sf /usr/bin/chromium /usr/local/bin/google-chrome; \
-      rm -rf /var/lib/apt/lists/*; \
     fi
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -eux; \
+    if [[ "${INSTALL_VNC}" == "1" ]]; then \
+      export HTTP_PROXY="${HTTP_PROXY:-}" HTTPS_PROXY="${HTTPS_PROXY:-}" ALL_PROXY="${ALL_PROXY:-}" NO_PROXY="${NO_PROXY:-}"; \
+      export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}" all_proxy="${ALL_PROXY:-}" no_proxy="${NO_PROXY:-}"; \
+      apt-fast update; \
+      apt-fast install -y --no-install-recommends novnc websockify x11vnc; \
+    fi
+
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 RUN set -eux; \
     if getent group "${USER_GID}" >/dev/null; then \
@@ -179,14 +247,9 @@ RUN set -eux; \
       /home/openclaw \
       /opt/uv
 
-COPY docker/entrypoint.sh /usr/local/bin/container-entrypoint.sh
-COPY docker/start-browser-stack.sh /usr/local/bin/start-browser-stack.sh
-COPY docker/profile.sh /etc/profile.d/openclaw-profile.sh
-
-RUN chmod 0755 \
-      /usr/local/bin/container-entrypoint.sh \
-      /usr/local/bin/start-browser-stack.sh \
-      /etc/profile.d/openclaw-profile.sh
+COPY --link --chmod=0755 docker/entrypoint.sh /usr/local/bin/container-entrypoint.sh
+COPY --link --chmod=0755 docker/start-browser-stack.sh /usr/local/bin/start-browser-stack.sh
+COPY --link --chmod=0755 docker/profile.sh /etc/profile.d/openclaw-profile.sh
 
 USER openclaw
 WORKDIR /home/openclaw
