@@ -28,13 +28,14 @@ GO_PATH_HOST=./instances/bot-mybot/go
 CHROMIUM_PROFILE_DIR_HOST=./instances/bot-mybot/chromium-profile
 ```
 
-Also set unique host ports:
+Also set unique host ports if you choose to publish them yourself:
 
-- `OPENCLAW_GATEWAY_PORT`
-- `OPENCLAW_BRIDGE_PORT`
-- `VNC_PORT`
 - `NOVNC_PORT`
-- `CHROMIUM_REMOTE_DEBUGGING_PORT`
+
+`VNC_PORT` and `CHROMIUM_REMOTE_DEBUGGING_PORT` are now intended for
+container-internal use by default and do not need unique host mappings for
+multi-instance setups. `NOVNC_PORT` remains published so you can access the
+desktop from outside the container.
 
 At least one channel token must be non-empty:
 

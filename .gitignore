@@ -6,14 +6,8 @@ data/uv-python/*
 data/go/*
 data/chromium-profile/*
 data/playwright/*
-instances/*/.env
-instances/*/openclaw/*
-instances/*/workspace/*
-instances/*/uv-cache/*
-instances/*/uv-python/*
-instances/*/go/*
-instances/*/chromium-profile/*
-instances/*/playwright/*
+# Ignore all per-bot instances; keep only the shared template in Git.
+instances/*
 !data/openclaw/.gitkeep
 !data/openclaw/openclaw.json.example
 !data/workspace/.gitkeep
@@ -23,11 +17,4 @@ instances/*/playwright/*
 !data/chromium-profile/.gitkeep
 !instances/.gitkeep
 !instances/_template/
-!instances/_template/.env.example
-!instances/_template/openclaw/.gitkeep
-!instances/_template/openclaw/openclaw.json.example
-!instances/_template/workspace/.gitkeep
-!instances/_template/uv-cache/.gitkeep
-!instances/_template/uv-python/.gitkeep
-!instances/_template/go/.gitkeep
-!instances/_template/chromium-profile/.gitkeep
+!instances/_template/**

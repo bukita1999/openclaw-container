@@ -23,11 +23,12 @@ if [[ "${ENABLE_VNC:-0}" == "1" ]]; then
     -display "${DISPLAY}" \
     -rfbport "${VNC_PORT:-5900}" \
     -rfbauth "${HOME}/.vnc/passwd" \
+    -localhost \
     -forever \
     -shared \
     -bg \
     -o /tmp/x11vnc.log
-  websockify --web=/usr/share/novnc/ "${NOVNC_PORT:-6080}" "127.0.0.1:${VNC_PORT:-5900}" >/tmp/novnc.log 2>&1 &
+  websockify --web=/usr/share/novnc/ "127.0.0.1:${NOVNC_PORT:-6080}" "127.0.0.1:${VNC_PORT:-5900}" >/tmp/novnc.log 2>&1 &
 fi
 
 if [[ "${START_CHROMIUM:-0}" == "1" ]]; then
@@ -45,7 +46,7 @@ if [[ "${START_CHROMIUM:-0}" == "1" ]]; then
       --no-first-run
       --no-default-browser-check
       --enable-automation
-      --remote-debugging-address=0.0.0.0
+      --remote-debugging-address=127.0.0.1
       --remote-debugging-port="${CHROMIUM_REMOTE_DEBUGGING_PORT:-9222}"
       --user-data-dir="${chromium_profile_dir}"
     )
