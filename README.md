@@ -2,14 +2,6 @@
 
 这个仓库把 `OpenClaw`、`uv` 和可选的 `CDP Browser + VNC + noVNC`、`Go` 全部安装在容器内部，宿主机只需要 `Docker Engine + Docker Compose`。
 
-默认模板现在会在容器启动后直接拉起容器内 Chromium，并把 OpenClaw browser tool 绑定到本地 CDP。也就是说，只要按模板启动，`docker compose up -d` 之后就可以直接用浏览器工具，不需要再手工进容器执行 `openclaw browser start`。
-
-仓库现在同时支持两种用法：
-
-- 🧍 单实例：沿用根目录 `.env` 和 `data/*`（未经人类测试）
-- 🤖 多实例：推荐模式，一个仓库配多个 `instances/<bot-name>/`
-
-如果你是第一次做多个机器人，建议直接用多实例模式，不要复制多个仓库。
 
 ## 🚀 QUICKSTART（经验版）
 
