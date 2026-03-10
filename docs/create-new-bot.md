@@ -77,11 +77,34 @@ At least one channel token must be non-empty:
 
 If both are empty, the container exits during startup.
 
+`OPENCLAW_GATEWAY_TOKEN` should also be set to a non-empty value. You can use any strong random password/string; leaving it empty can cause runtime config errors when gateway auth mode is `token`.
+
 ## 3. Edit `openclaw.json`
 
 Update [instances/bot-mybot/openclaw/openclaw.json](/home/cao/docker-compose/openclaw-container/instances/bot-mybot/openclaw/openclaw.json) with the bot's real channel and provider settings.
 
 If the file contains `${VAR}` placeholders, the matching variables in `.env` must be set.
+
+Before starting a new bot, explicitly decide whether it will use:
+
+- Discord only
+- Telegram only
+- Both Discord and Telegram
+
+Then update `channels.*.enabled`, channel tokens, and channel policies accordingly. Disable unused channels in `openclaw.json` to avoid confusion.
+
+Recommended policy for production-like usage: prefer direct allowlists instead of long-term pairing mode.
+
+- Prefer `dmPolicy: "allowlist"` for the channels you use.
+- Prefer `groupPolicy: "allowlist"` and explicitly configure allowed groups/guilds/users.
+- Use pairing mainly for first-time onboarding/approval workflows.
+
+References (official docs):
+
+- Security + allowlist model: https://docs.openclaw.ai/gateway/security
+- Telegram channel setup/policies: https://docs.openclaw.ai/telegram
+- Discord channel setup/policies: https://docs.openclaw.ai/discord
+- Pairing behavior: https://docs.openclaw.ai/pairing
 
 ## 4. Validate and Start
 

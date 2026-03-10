@@ -10,6 +10,14 @@ This repository packages an OpenClaw runtime image and instance templates rather
 - `data/`: default single-instance runtime directories; commit only tracked examples such as `data/openclaw/openclaw.json.example`.
 - `instances/_template/`: starter files for multi-instance setups. Copy this directory when adding a new bot instance.
 
+## Documentation Positioning
+
+- `README.md` includes a practical `QUICKSTART` section based on hands-on experience in this repo.
+- When creating a new bot/instance, always follow `docs/create-new-bot.md` first, then apply bot-specific adjustments.
+- This project is intentionally pragmatic and personal-use oriented (`vibe coding`), so docs and layout may not look fully polished.
+- When docs and runtime behavior diverge, prefer direct source/config inspection (`Dockerfile`, `docker-compose.yml`, `docker/*`, `.env*`, and instance `openclaw.json`) and update configs accordingly.
+- For troubleshooting, strongly prefer agent-assisted source analysis and config tuning over guessing.
+
 ## Build, Test, and Development Commands
 
 Use Docker Compose as the main workflow:

@@ -11,6 +11,79 @@
 
 如果你是第一次做多个机器人，建议直接用多实例模式，不要复制多个仓库。
 
+## QUICKSTART（经验版）
+
+- **这是一个 vibe coding 项目，主要为了个人使用便捷而维护。**
+- **文档和代码组织并不追求“企业级规范”，如果你觉得顺手可以试用。**
+- **强烈建议你对 OpenClaw 已有一定折腾基础。**
+- 这个项目的核心尝试是：在一个仓库里管理多个 bot（也支持只跑一个 bot）。
+
+### 1. 先准备根目录 `.env`
+
+```bash
+cp .env.example .env
+```
+
+先确保本机有 `docker compose`。  
+**强烈建议中国大陆网络环境配置代理**，把代理相关变量写到根目录 `.env`：
+
+```env
+HTTP_PROXY=http://host.docker.internal:7890
+HTTPS_PROXY=http://host.docker.internal:7890
+ALL_PROXY=http://host.docker.internal:7890
+NO_PROXY=127.0.0.1,localhost
+NODE_USE_ENV_PROXY=1
+```
+
+### 2. 选择构建组件（建议值）
+
+个人建议：除了 Go 之外都装。Go 是历史残留能力，之前踩过坑，为了兼容场景先保留开关，但默认建议关闭。
+
+```env
+INSTALL_CHROMIUM=1
+INSTALL_VNC=1
+INSTALL_GO=0
+USE_SJTUG_MIRROR=1
+```
+
+- **`USE_SJTUG_MIRROR=1` 推荐开启，用交大源加速构建。**
+- **如果构建过程出现镜像相关问题，请改回 `USE_SJTUG_MIRROR=0` 再试。**
+
+### 3. 构建镜像
+
+```bash
+docker compose build --no-cache
+```
+
+### 4. 新建一个机器人实例
+
+最省事方式：让 agent 直接阅读 [docs/create-new-bot.md](./docs/create-new-bot.md) 并按文档执行。
+
+也可以手动创建（示例 `bot-example`）：
+
+```bash
+cp -a instances/_template instances/bot-example
+mv instances/bot-example/.env.example instances/bot-example/.env
+cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/openclaw/openclaw.json
+```
+
+### 5. 配置实例 `.env` 与 `openclaw.json`
+
+`instances/bot-example/.env` 里重点配置：
+
+- 代理（**没有代理时，Docker 拉取和 Discord 相关网络请求常见失败**）
+- Telegram 或 Discord token（至少一个非空）
+- 你的 provider API key（当前示例默认偏向阿里百炼 Coding Plan）
+
+`instances/bot-example/openclaw/openclaw.json` 是每个 bot 的具体行为配置。详细字段以 OpenClaw 官方文档为准。  
+后续如果有更多用户场景，可以把 provider 配置模板继续泛化（`TODO`）。
+
+### 6. 运行与排错建议
+
+- **更推荐使用非 root 用户运行容器，能减少一些奇怪权限问题。**
+- 如果启动失败，优先检查 `UID/GID` 是否匹配，并结合日志定位问题。
+- **非常推荐使用 Claude Code / Codex / OpenCode 等 AI 工具辅助分析日志、解释源码和调整配置。**
+
 ## 设计目标
 
 - 基础镜像固定为 `debian:12-slim`
