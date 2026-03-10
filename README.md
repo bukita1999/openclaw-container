@@ -353,7 +353,7 @@ ENABLE_VNC=1
 CHROMIUM_HEADLESS=0
 ```
 
-`VNC_PORT` 默认只在容器内监听，不会发布到宿主机；`NOVNC_PORT` 会继续发布到宿主机，供外部访问桌面。
+`VNC_PORT` 默认只在容器内监听，不会发布到宿主机；`websockify` 会在容器内监听 `0.0.0.0:6080`，并通过 `NOVNC_PORT` 发布到宿主机供外部访问桌面。
 
 然后重新启动对应实例：
 
