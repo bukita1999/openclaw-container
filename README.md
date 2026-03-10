@@ -1,4 +1,4 @@
-# OpenClaw Debian Container
+# 🦞 OpenClaw Debian Container
 
 这个仓库把 `OpenClaw`、`uv` 和可选的 `CDP Browser + VNC + noVNC`、`Go` 全部安装在容器内部，宿主机只需要 `Docker Engine + Docker Compose`。
 
@@ -6,19 +6,19 @@
 
 仓库现在同时支持两种用法：
 
-- 单实例：沿用根目录 `.env` 和 `data/*`
-- 多实例：推荐模式，一个仓库配多个 `instances/<bot-name>/`
+- 🧍 单实例：沿用根目录 `.env` 和 `data/*`（未经人类测试）
+- 🤖 多实例：推荐模式，一个仓库配多个 `instances/<bot-name>/`
 
 如果你是第一次做多个机器人，建议直接用多实例模式，不要复制多个仓库。
 
-## QUICKSTART（经验版）
+## 🚀 QUICKSTART（经验版）
 
-- **这是一个 vibe coding 项目，主要为了个人使用便捷而维护。**
-- **文档和代码组织并不追求“企业级规范”，如果你觉得顺手可以试用。**
-- **强烈建议你对 OpenClaw 已有一定折腾基础。**
-- 这个项目的核心尝试是：在一个仓库里管理多个 bot（也支持只跑一个 bot）。
+- ✨ **这是一个 vibe coding 项目，主要为了个人使用便捷而维护。**
+- 🧪 **文档和代码组织并不追求“企业级规范”，如果你觉得顺手可以试用。**
+- 🧠 **强烈建议你对 OpenClaw 已有一定折腾基础。**
+- 🧭 这个项目的核心尝试是：在一个仓库里管理多个 bot（也支持只跑一个 bot）。
 
-### 1. 先准备根目录 `.env`
+### 1️⃣ 先准备根目录 `.env`
 
 ```bash
 cp .env.example .env
@@ -35,7 +35,7 @@ NO_PROXY=127.0.0.1,localhost
 NODE_USE_ENV_PROXY=1
 ```
 
-### 2. 选择构建组件（建议值）
+### 2️⃣ 选择构建组件（建议值）
 
 个人建议：除了 Go 之外都装。Go 是历史残留能力，之前踩过坑，为了兼容场景先保留开关，但默认建议关闭。
 
@@ -49,13 +49,13 @@ USE_SJTUG_MIRROR=1
 - **`USE_SJTUG_MIRROR=1` 推荐开启，用交大源加速构建。**
 - **如果构建过程出现镜像相关问题，请改回 `USE_SJTUG_MIRROR=0` 再试。**
 
-### 3. 构建镜像
+### 3️⃣ 构建镜像
 
 ```bash
 docker compose build --no-cache
 ```
 
-### 4. 新建一个机器人实例
+### 4️⃣ 新建一个机器人实例
 
 最省事方式：让 agent 直接阅读 [docs/create-new-bot.md](./docs/create-new-bot.md) 并按文档执行。
 
@@ -67,7 +67,7 @@ mv instances/bot-example/.env.example instances/bot-example/.env
 cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/openclaw/openclaw.json
 ```
 
-### 5. 配置实例 `.env` 与 `openclaw.json`
+### 5️⃣ 配置实例 `.env` 与 `openclaw.json`
 
 `instances/bot-example/.env` 里重点配置：
 
@@ -78,13 +78,24 @@ cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/op
 `instances/bot-example/openclaw/openclaw.json` 是每个 bot 的具体行为配置。详细字段以 OpenClaw 官方文档为准。  
 后续如果有更多用户场景，可以把 provider 配置模板继续泛化（`TODO`）。
 
-### 6. 运行与排错建议
+### 6️⃣ 运行与排错建议
+
+- 单实例启动命令：
+```bash
+docker compose up -d
+```
+
+- 多实例启动命令（把 `bot-example` 替换成你的实例名）：
+
+```bash
+docker compose --env-file ./instances/bot-example/.env -p bot-example up -d
+```
 
 - **更推荐使用非 root 用户运行容器，能减少一些奇怪权限问题。**
 - 如果启动失败，优先检查 `UID/GID` 是否匹配，并结合日志定位问题。
 - **非常推荐使用 Claude Code / Codex / OpenCode 等 AI 工具辅助分析日志、解释源码和调整配置。**
 
-## 设计目标
+## 🎯 设计目标
 
 - 基础镜像固定为 `debian:12-slim`
 - `OpenClaw` 通过 `npm install -g openclaw@latest` 安装在镜像里
@@ -95,7 +106,7 @@ cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/op
 - OpenClaw 配置目录、workspace、uv 缓存、uv Python、Go 工作区、Chromium profile 全部映射到宿主机
 - 同一份镜像可被多个机器人实例复用，真正变化的是配置和数据目录
 
-## 为什么推荐多实例 Compose
+## 🧠 为什么推荐多实例 Compose
 
 这个项目的差异点主要是：
 
@@ -113,7 +124,7 @@ cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/op
 
 不建议一机器人一个仓库，也不建议第一次就上 `k8s` 或 `k3s`。先把单机多实例跑稳，再考虑更重的编排系统。
 
-## 单实例模式
+## 1️⃣ 单实例模式
 
 如果你只跑一个机器人，继续使用根目录 `.env` 和 `data/*` 即可。
 
@@ -137,7 +148,7 @@ OpenClaw 主配置文件路径：
 
 真实运行配置 `./data/openclaw/openclaw.json` 会包含网关 token、配对状态或运行时变更，不建议提交到 Git；仓库已默认忽略该文件。
 
-### 单实例快速开始
+### ⚡ 单实例快速开始
 
 1. 复制根目录环境变量模板。
 2. 按需填写 token、provider key 和开关。
@@ -169,7 +180,7 @@ docker compose exec openclaw bash
 docker compose exec openclaw openclaw onboard
 ```
 
-## 多实例模式
+## ♾️ 多实例模式
 
 多实例模式的核心思路是：
 
@@ -214,7 +225,7 @@ instances/
 
 这份 `bot-example` 默认把 Telegram 和 Discord 频道都设为 `enabled: false`，并使用占位 token。这样你第一次试多实例时，不会因为忘记替换 token 就误连真实外部通道。
 
-### 多实例下的镜像构建规则
+### 🏗️ 多实例下的镜像构建规则
 
 默认建议所有实例共用同一份镜像，也就是这些构建期变量保持一致：
 
@@ -266,7 +277,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example build
 docker compose --env-file ./instances/bot-example/.env -p bot-example up -d
 ```
 
-### 第一次创建实例
+### 🆕 第一次创建实例
 
 下面以 `bot-example` 为例。
 
@@ -312,7 +323,7 @@ cp instances/bot-example/openclaw/openclaw.json.example instances/bot-example/op
 
 这里的 `INSTANCE_ENV_FILE` 也必须指向这个实例自己的 `.env`。compose 会用它把同一份文件重新注入到容器运行时环境里。
 
-### 启动第一个实例
+### ▶️ 启动第一个实例
 
 镜像通常只需要构建一次：
 
@@ -344,7 +355,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example exec openc
 docker compose --env-file ./instances/bot-example/.env -p bot-example down
 ```
 
-### 创建第二个实例
+### ➕ 创建第二个实例
 
 不要复制整个仓库，只复制实例目录：
 
@@ -367,7 +378,7 @@ cp -a instances/bot-example instances/bot-example-2
 docker compose --env-file ./instances/bot-example-2/.env -p bot-example-2 up -d
 ```
 
-### 多实例模式下，哪些东西必须隔离
+### 🔐 多实例模式下，哪些东西必须隔离
 
 必须隔离：
 
@@ -386,7 +397,7 @@ docker compose --env-file ./instances/bot-example-2/.env -p bot-example-2 up -d
 
 第一次上手建议连缓存目录也全部隔离。先保证不串数据、不互相污染，等跑稳以后再考虑是否共享 `uv-python` 或 `chromium-profile`。
 
-### 为什么这里不推荐 `docker compose up --scale`
+### 🚫 为什么这里不推荐 `docker compose up --scale`
 
 `--scale` 适合同一个服务的多个同配置副本。
 
@@ -400,7 +411,7 @@ docker compose --env-file ./instances/bot-example-2/.env -p bot-example-2 up -d
 
 所以这里需要的是“参数化多实例”，不是“同配置副本扩容”。
 
-## 可选组件开关
+## 🧩 可选组件开关
 
 在 `.env` 或实例级 `.env` 里修改后重新 `docker compose build`：
 
@@ -450,7 +461,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example up -d
 
 多实例时请务必给每个实例分配不冲突的主机端口。
 
-## 代理说明
+## 🌐 代理说明
 
 在 `.env` 或实例级 `.env` 里设置：
 
@@ -483,7 +494,7 @@ USE_SJTUG_MIRROR=1
 - 因为 SJTUG 的 `apt` 源走 HTTPS，Dockerfile 里会先安装 `ca-certificates` 再切换镜像，避免证书缺失导致 `apt-get update` 失败
 - Debian security 源也会一起切到 SJTUG；如果你更看重安全更新时效，可以保持 `USE_SJTUG_MIRROR=0`
 
-## 迁移方案
+## 🚚 迁移方案
 
 迁移的最小单位不是整个仓库，而是单个实例目录。
 
@@ -495,7 +506,7 @@ USE_SJTUG_MIRROR=1
 
 其余如 `uv-cache`、`uv-python`、`chromium-profile` 可以一起迁，也可以在新机器重建。
 
-### 推荐迁移步骤
+### 📋 推荐迁移步骤
 
 1. 在旧机器停止实例，保证状态一致。
 2. 打包实例目录。
@@ -522,11 +533,11 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example logs -f
 
 如果新机器目录路径变了，请同步调整 `instances/bot-example/.env` 里的主机挂载路径和端口。
 
-## 备份方案
+## 💾 备份方案
 
 建议做两层备份。
 
-### 第一层：最小可恢复备份
+### 1️⃣ 第一层：最小可恢复备份
 
 这是必须备份的核心状态：
 
@@ -534,7 +545,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example logs -f
 - `instances/<bot>/openclaw/`
 - `instances/<bot>/workspace/`
 
-### 第二层：整实例目录备份
+### 2️⃣ 第二层：整实例目录备份
 
 更省心的做法是直接备份整个实例目录：
 
@@ -542,13 +553,13 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example logs -f
 
 这样恢复时最简单，也最不容易漏文件。
 
-### 推荐策略
+### ✅ 推荐策略
 
 - 每天备份 `openclaw/` 和 `workspace/`
 - 每周打包一次整个 `instances/`
 - 升级 OpenClaw 或改镜像前，先手工备份将要升级的实例
 
-### 备份时机
+### ⏱️ 备份时机
 
 第一次实践时，建议先停容器再备份：
 
@@ -559,7 +570,7 @@ tar czf bot-example-backup-$(date +%F).tar.gz ./instances/bot-example
 
 这样最稳，也最容易确认恢复结果。
 
-## 升级建议
+## 🔄 升级建议
 
 镜像升级时，不要一次升级所有实例。建议这样做：
 
@@ -571,7 +582,7 @@ tar czf bot-example-backup-$(date +%F).tar.gz ./instances/bot-example
 
 这比同时升级全部实例更容易回滚。
 
-## 常用命令
+## 🛠️ 常用命令
 
 单实例模式：
 
@@ -592,7 +603,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example exec openc
 docker compose --env-file ./instances/bot-example/.env -p bot-example exec openclaw openclaw dashboard --no-open
 ```
 
-## 参考依据
+## 📚 参考依据
 
 - OpenClaw README: https://github.com/openclaw/openclaw
 - OpenClaw Docker 文档: https://docs.openclaw.ai/install/docker
@@ -603,7 +614,7 @@ docker compose --env-file ./instances/bot-example/.env -p bot-example exec openc
 - Go 安装文档: https://go.dev/doc/install
 - Docker 代理文档: https://docs.docker.com/engine/cli/proxy/
 
-## 当前上游版本（调研日期：2026-03-08）
+## 📌 当前上游版本（调研日期：2026-03-08）
 
 - `openclaw` npm 最新版本：`2026.3.7`
 - `Go` 最新版本：`1.26.1`
